@@ -1,0 +1,74 @@
+    ''' <summary>
+    ''' valida la asignacion del producto al cliente
+    ''' </summary>
+    ''' <param name="idGroup"></param>
+    ''' <param name="idChain"></param>
+    ''' <param name="idMerchant"></param>
+    ''' <param name="idTipoCliente"></param>
+    ''' <param name="idCategoriaErp"></param>
+    ''' <param name="idProveedor"></param>
+    ''' <param name="issuer"></param>
+    ''' <returns></returns>
+    Public Function ValidaAsignacionProductoCliente(ByVal idGroup As String, ByVal idChain As Double,
+                                                    ByVal idMerchant As String, ByVal idTipoCliente As Integer,
+                                                    ByVal idCategoriaErp As Integer, ByVal idProveedor As Integer,
+                                                    ByRef issuer As String) As Boolean
+        Dim esValido As Boolean = False
+
+        Try
+            ''Bloque para controlar la transaccion y al finalizar se destruiran los objetos
+            Using conexion As New SqlConnection(ConexionBO)
+                ''Se abre la conexion
+                conexion.Open()
+                ''Comando a ejecutar en este caso un storel
+                Dim cmd As New SqlCommand("usp_ValidaAsignacionProductoCliente", conexion)
+                ''objeto donde se almacenara el resultado de la consulta
+                Dim lector As SqlDataReader = Nothing
+
+                ''Comando tipo store
+                cmd.CommandType = CommandType.StoredProcedure
+                ''Lista de parametros a enviar al store
+                Dim listaParametros As New List(Of SqlParameter)
+
+                listaParametros.Add(New SqlParameter("@idGroup", idGroup))
+                listaParametros.Add(New SqlParameter("@idChain", idChain))
+                listaParametros.Add(New SqlParameter("@idMerchant", idMerchant))
+                listaParametros.Add(New SqlParameter("@idTipoCliente", idTipoCliente))
+                listaParametros.Add(New SqlParameter("@id_Categoria_erp", idCategoriaErp))
+                listaParametros.Add(New SqlParameter("@id_Proveedor", idProveedor))
+
+                ''Timeout de espera de la respuesta
+                cmd.CommandTimeout = 15000
+
+                ''Se le pasa la lista de parametros al comando
+                cmd.Parameters.AddRange(listaParametros.ToArray())
+
+                ''Se ejecuta el store
+                lector = cmd.ExecuteReader()
+
+                ''Se evalua si tuvo resultados la consulta
+                If lector.HasRows Then
+                    ''Se lee cada regsitro devuelto por el store 'issuer'
+                    While lector.Read()
+                        issuer = lector.Item("issuer")
+                        esValido = True
+                    End While
+                Else
+                    esValido = False
+                End If
+
+                conexion.Close()
+                conexion.Dispose()
+                cmd.Dispose()
+                lector.Close()
+            End Using
+
+        Catch ex As Exception
+            log.ErrorLOG(5, "Clase: ObtieneInfoTransaccion, ", " Metodo: ValidaAsignacionProductoCliente(), ", " Error: " & ex.ToString())
+            esValido = False
+        Finally
+            GC.Collect()
+        End Try
+        Return esValido
+
+    End Function
